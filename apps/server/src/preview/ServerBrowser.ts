@@ -222,6 +222,7 @@ export class ServerBrowser extends Context.Service<
       readonly maxHeight: number;
       readonly quality: number;
       readonly canOperate: boolean;
+      readonly callerSessionId: string;
     }) => Effect.Effect<
       ServerBrowserViewer,
       ServerBrowserTabNotFoundError | ServerBrowserLaunchError,
@@ -232,6 +233,7 @@ export class ServerBrowser extends Context.Service<
       readonly threadId: string;
       readonly tabId: string;
       readonly chooserId: string;
+      readonly callerSessionId: string;
       readonly files: ReadonlyArray<{
         readonly name: string;
         readonly mimeType: string;
@@ -252,6 +254,7 @@ export class ServerBrowser extends Context.Service<
 
 interface ViewerState {
   readonly id: string;
+  readonly callerSessionId: string;
   readonly canOperate: boolean;
   readonly pressedKeys: Map<string, { key: string; code: string }>;
   readonly pressedButtons: Map<"left" | "middle" | "right", { x: number; y: number }>;
@@ -308,6 +311,7 @@ interface ServerTab {
     readonly chooser: FileChooser;
     readonly accept: string;
     readonly offeredTo: string | null;
+    readonly offeredToSessionId: string | null;
   } | null;
   dialog: Dialog | null;
   setting: PreviewViewportSetting;
@@ -1163,6 +1167,7 @@ const make = Effect.gen(function* () {
       chooser,
       accept: accept.slice(0, 1024),
       offeredTo: null,
+      offeredToSessionId: null,
     };
     pushFileChooser(tab);
   };
@@ -1172,7 +1177,7 @@ const make = Effect.gen(function* () {
     const controller = [...tab.viewers].find((viewer) => viewer.id === tab.control.controller);
     if (!open || !controller) return;
     if (open.offeredTo !== controller.id) {
-      tab.fileChooser = { ...open, id: NodeCrypto.randomUUID(), offeredTo: controller.id };
+      tab.fileChooser = { ...open, id: NodeCrypto.randomUUID(), offeredTo: controller.id, offeredToSessionId: controller.callerSessionId };
       if (open.offeredTo !== null)
         for (const viewer of tab.viewers) viewer.push({ _tag: "fileChooserClosed", id: open.id });
     }
@@ -1197,7 +1202,8 @@ const make = Effect.gen(function* () {
       !open ||
       open.id !== input.chooserId ||
       open.offeredTo === null ||
-      open.offeredTo !== tab.control.controller
+      open.offeredTo !== tab.control.controller ||
+      open.offeredToSessionId !== input.callerSessionId
     )
       return false;
     if (input.files.length > 0) {
@@ -2538,6 +2544,7 @@ const make = Effect.gen(function* () {
     };
     const viewer: ViewerState = {
       id: NodeCrypto.randomUUID(),
+      callerSessionId: input.callerSessionId,
       canOperate: input.canOperate,
       pressedKeys: new Map(),
       pressedButtons: new Map(),

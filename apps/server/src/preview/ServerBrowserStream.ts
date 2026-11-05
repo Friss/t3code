@@ -86,6 +86,7 @@ const makeHandler = Effect.fnUntraced(function* (browser: ServerBrowser.ServerBr
           threadId,
           tabId,
           canOperate,
+          callerSessionId: session.sessionId,
           maxWidth: intParam(params, "maxWidth", 1280, 7680),
           maxHeight: intParam(params, "maxHeight", 800, 4320),
           quality: intParam(params, "quality", DEFAULT_QUALITY, 100),
@@ -247,7 +248,7 @@ const UPLOAD_MAX_FILES = 20;
 // The request span already covers this upload route.
 const receiveUpload = Effect.fnUntraced(
   function* (browser: ServerBrowser.ServerBrowser["Service"], params: URLSearchParams) {
-    yield* authenticateMediaRequest(AuthPreviewOperateScope);
+    const uploadSession = yield* authenticateMediaRequest(AuthPreviewOperateScope);
     const request = yield* HttpServerRequest.HttpServerRequest;
     const fs = yield* FileSystem.FileSystem;
     const parts = yield* request.multipart.pipe(
@@ -276,6 +277,7 @@ const receiveUpload = Effect.fnUntraced(
       threadId: params.get("threadId") ?? "",
       tabId: params.get("tabId") ?? "",
       chooserId: params.get("chooser") ?? "",
+      callerSessionId: uploadSession.sessionId,
       files,
     });
     return answered

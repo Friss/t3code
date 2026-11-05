@@ -410,10 +410,12 @@ const ready = Effect.gen(function* () {
   const tabId = PreviewTabId.make(opened.tabId!);
   return { browser, broker, tabId };
 });
+const TEST_CALLER_SESSION_ID = "test-viewer-session";
 const viewerInput = (tabId: string, canOperate: boolean) => ({
   threadId: scope.thread.threadId,
   tabId,
   canOperate,
+  callerSessionId: TEST_CALLER_SESSION_ID,
   maxWidth: 1280,
   maxHeight: 800,
   quality: 70,
@@ -1530,6 +1532,7 @@ it.live("a page's file picker goes to the controller and takes its uploaded file
           threadId: scope.thread.threadId,
           tabId,
           chooserId,
+          callerSessionId: TEST_CALLER_SESSION_ID,
           files: [file("a.csv"), file("b.csv")],
         });
       expect(yield* answer("other")).toBe(false);
@@ -1574,6 +1577,7 @@ it.live("overlapping file pickers keep the newer offer answerable", () =>
           threadId: scope.thread.threadId,
           tabId,
           chooserId: second.id,
+          callerSessionId: TEST_CALLER_SESSION_ID,
           files: [{ name: "a.csv", mimeType: "text/csv", buffer: Buffer.from("a") }],
         }),
       ).toBe(true);
@@ -1641,6 +1645,7 @@ it.live("a detached file picker stays open across same-document navigation", () 
           threadId: scope.thread.threadId,
           tabId,
           chooserId: offered.id,
+          callerSessionId: TEST_CALLER_SESSION_ID,
           files: [{ name: "a.csv", mimeType: "text/csv", buffer: Buffer.from("a") }],
         }),
       ).toBe(true);
@@ -1690,6 +1695,7 @@ it.live.each(["main", "iframe"])(
             threadId: scope.thread.threadId,
             tabId,
             chooserId: offered.id,
+            callerSessionId: TEST_CALLER_SESSION_ID,
             files: [{ name: "a.csv", mimeType: "text/csv", buffer: Buffer.from("a") }],
           }),
         ).toBe(false);
@@ -1811,6 +1817,7 @@ it.live("only the current controller can answer a file picker", () =>
         threadId: scope.thread.threadId,
         tabId,
         chooserId: offered.id,
+        callerSessionId: TEST_CALLER_SESSION_ID,
         files: [{ name: "a.txt", mimeType: "text/plain", buffer: Buffer.from("a") }],
       });
       expect(answered).toBe(false);
