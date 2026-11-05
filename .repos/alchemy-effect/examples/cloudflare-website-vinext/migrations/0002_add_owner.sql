@@ -1,0 +1,1 @@
+ALTER TABLE notes ADD COLUMN owner TEXT NOT NULL DEFAULT 'anonymous';

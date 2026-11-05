@@ -36,11 +36,11 @@ export const FrontendHandlers = HttpApiBuilder.group(
         ),
       )
       .handle("listNotes", () => client.Backend.listNotes().pipe(Effect.orDie))
-      .handle("createNote", ({ payload }) =>
-        client.Backend.createNote({ payload }).pipe(Effect.orDie),
+      .handle("createNote", ({ payload, headers }) =>
+        client.Backend.createNote({ payload, headers }).pipe(Effect.orDie),
       )
-      .handle("deleteNote", ({ params }) =>
-        client.Backend.deleteNote({ params }).pipe(Effect.orDie),
+      .handle("deleteNote", ({ params, headers }) =>
+        client.Backend.deleteNote({ params, headers }).pipe(Effect.orDie),
       )
       .handle("getKv", ({ params }) =>
         kvGet(params.key).pipe(Effect.map((value) => new KvValue({ value }))),

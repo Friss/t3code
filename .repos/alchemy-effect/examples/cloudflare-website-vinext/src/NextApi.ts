@@ -3,7 +3,7 @@ import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint";
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup";
 import * as HttpApiSchema from "effect/http-api/HttpApiSchema";
 import * as Schema from "effect/Schema";
-import { Note, NotesList } from "./BackendApi";
+import { AuthorizationHeader, Note, NotesList } from "./BackendApi";
 
 export class Hello extends Schema.Class<Hello>("Hello")({
   message: Schema.String,
@@ -31,12 +31,14 @@ export class FrontendApi extends HttpApi.make("FrontendApi")
         payload: Schema.Struct({
           title: Schema.String,
         }),
+        headers: AuthorizationHeader,
         success: Note.pipe(HttpApiSchema.status(201)),
       }),
       HttpApiEndpoint.delete("deleteNote", "/notes/:id", {
         params: Schema.Struct({
           id: Schema.String,
         }),
+        headers: AuthorizationHeader,
         success: HttpApiSchema.NoContent,
       }),
       HttpApiEndpoint.get("getKv", "/kv/:key", {

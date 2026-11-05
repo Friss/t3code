@@ -3,6 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+function getUserToken(): string {
+  let token = localStorage.getItem("user-token");
+  if (!token) {
+    token = crypto.randomUUID();
+    localStorage.setItem("user-token", token);
+  }
+  return token;
+}
+
 export function NotesForm() {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -20,6 +29,7 @@ export function NotesForm() {
         method: "POST",
         headers: {
           "content-type": "application/json",
+          authorization: `Bearer ${getUserToken()}`,
         },
         body: JSON.stringify({ title: trimmed }),
       });
@@ -75,6 +85,9 @@ export function NoteDelete({ id }: { id: string }) {
     try {
       const res = await fetch(`/api/notes/${encodeURIComponent(id)}`, {
         method: "DELETE",
+        headers: {
+          authorization: `Bearer ${getUserToken()}`,
+        },
       });
       if (!res.ok) {
         throw new Error(`delete failed: ${res.status}`);

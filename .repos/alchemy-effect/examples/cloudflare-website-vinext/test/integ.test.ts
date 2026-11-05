@@ -168,7 +168,10 @@ test(
     const url = yield* base;
     const title = "vinext-d1-note";
     const created = yield* executeWhenReady(
-      HttpClientRequest.post(`${url}/api/notes`).pipe(HttpClientRequest.bodyJsonUnsafe({ title })),
+      HttpClientRequest.post(`${url}/api/notes`).pipe(
+        HttpClientRequest.setHeader("authorization", "Bearer test-user"),
+        HttpClientRequest.bodyJsonUnsafe({ title }),
+      ),
     );
     expect(created.status).toBe(201);
     const listed = yield* getWhenReady(`${url}/api/notes`);
@@ -180,7 +183,9 @@ test(
     expect(body.notes.some((note) => note.title === title)).toBe(true);
 
     const deleted = yield* executeWhenReady(
-      HttpClientRequest.delete(`${url}/api/notes/${createdBody.id}`),
+      HttpClientRequest.delete(`${url}/api/notes/${createdBody.id}`).pipe(
+        HttpClientRequest.setHeader("authorization", "Bearer test-user"),
+      ),
     );
     expect(deleted.status).toBe(204);
     const after = (yield* getWhenReady(`${url}/api/notes`).pipe(

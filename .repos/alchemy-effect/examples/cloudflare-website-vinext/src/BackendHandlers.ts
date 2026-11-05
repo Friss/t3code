@@ -1,8 +1,16 @@
 import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
-import { BackendApi, Note, NotesList } from "./BackendApi";
+import { BackendApi, Forbidden, Note, NotesList } from "./BackendApi";
 import { DB } from "./Bindings";
+
+const extractOwner = (authorization: string): Effect.Effect<string, Forbidden> => {
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  if (!match || !match[1]) {
+    return Effect.fail(new Forbidden({ message: "Missing or invalid Bearer token" }));
+  }
+  return Effect.succeed(match[1]);
+};
 
 export const BackendHandlers = HttpApiBuilder.group(
   BackendApi,
@@ -13,11 +21,12 @@ export const BackendHandlers = HttpApiBuilder.group(
     return handlers
       .handle("listNotes", () =>
         db
-          .prepare("SELECT id, title, source, created_at FROM notes ORDER BY created_at DESC")
+          .prepare("SELECT id, title, source, owner, created_at FROM notes ORDER BY created_at DESC")
           .all<{
             id: string;
             title: string;
             source: string;
+            owner: string;
             created_at: number;
           }>()
           .pipe(
@@ -30,6 +39,7 @@ export const BackendHandlers = HttpApiBuilder.group(
                         id: row.id,
                         title: row.title,
                         source: row.source,
+                        owner: row.owner,
                         createdAt: row.created_at,
                       }),
                   ),
@@ -38,27 +48,33 @@ export const BackendHandlers = HttpApiBuilder.group(
             Effect.orDie,
           ),
       )
-      .handle("createNote", ({ payload }) =>
+      .handle("createNote", ({ payload, headers }) =>
         Effect.gen(function* () {
+          const owner = yield* extractOwner(headers.authorization);
           const note = new Note({
             id: crypto.randomUUID(),
             title: payload.title,
             source: "effect-httpapi",
+            owner,
             createdAt: Date.now(),
           });
           yield* db
-            .prepare("INSERT INTO notes (id, title, source, created_at) VALUES (?, ?, ?, ?)")
-            .bind(note.id, note.title, note.source, note.createdAt)
-            .run();
+            .prepare("INSERT INTO notes (id, title, source, owner, created_at) VALUES (?, ?, ?, ?, ?)")
+            .bind(note.id, note.title, note.source, note.owner, note.createdAt)
+            .run()
+            .pipe(Effect.orDie);
           return note;
-        }).pipe(Effect.orDie),
+        }),
       )
-      .handle("deleteNote", ({ params }) =>
-        db
-          .prepare("DELETE FROM notes WHERE id = ?")
-          .bind(params.id)
-          .run()
-          .pipe(Effect.asVoid, Effect.orDie),
+      .handle("deleteNote", ({ params, headers }) =>
+        Effect.gen(function* () {
+          const owner = yield* extractOwner(headers.authorization);
+          yield* db
+            .prepare("DELETE FROM notes WHERE id = ? AND owner = ?")
+            .bind(params.id, owner)
+            .run()
+            .pipe(Effect.orDie);
+        }),
       );
   }),
 );
