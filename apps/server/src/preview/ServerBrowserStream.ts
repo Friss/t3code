@@ -85,6 +85,7 @@ const makeHandler = Effect.fnUntraced(function* (browser: ServerBrowser.ServerBr
         .attachViewer({
           threadId,
           tabId,
+          sessionId: session.sessionId,
           canOperate,
           maxWidth: intParam(params, "maxWidth", 1280, 7680),
           maxHeight: intParam(params, "maxHeight", 800, 4320),
@@ -226,11 +227,12 @@ const serveDownload = Effect.fnUntraced(function* (
   browser: ServerBrowser.ServerBrowser["Service"],
   params: URLSearchParams,
 ) {
-  yield* authenticateMediaRequest(AuthOrchestrationReadScope);
+  const session = yield* authenticateMediaRequest(AuthOrchestrationReadScope);
   const download = yield* browser.openDownload({
     threadId: params.get("threadId") ?? "",
     tabId: params.get("tabId") ?? "",
     downloadId: params.get("id") ?? "",
+    sessionId: session.sessionId,
   });
   if (Option.isNone(download)) return HttpServerResponse.text("Not Found", { status: 404 });
   return yield* HttpServerResponse.file(download.value.path, {

@@ -142,6 +142,7 @@ it.effect.each([
       {
         threadId: "thread",
         tabId: "tab",
+        sessionId: AuthSessionId.make("stream-test"),
         maxWidth: 1280,
         maxHeight: 800,
         quality: 70,

@@ -410,9 +410,11 @@ const ready = Effect.gen(function* () {
   const tabId = PreviewTabId.make(opened.tabId!);
   return { browser, broker, tabId };
 });
+const TEST_SESSION_ID = "test-session-id";
 const viewerInput = (tabId: string, canOperate: boolean) => ({
   threadId: scope.thread.threadId,
   tabId,
+  sessionId: TEST_SESSION_ID,
   canOperate,
   maxWidth: 1280,
   maxHeight: 800,
@@ -1361,6 +1363,7 @@ it.live.each([false, true])(
           threadId: scope.thread.threadId,
           tabId,
           downloadId: offered.id,
+          sessionId: TEST_SESSION_ID,
         });
         expect(Option.isSome(file) && file.value.fileName).toBe("report.csv");
         expect(yield* fs.readFileString(Option.getOrThrow(file).path)).toBe("a,b");
@@ -1386,6 +1389,7 @@ it.live.each([false, true])(
               threadId: scope.thread.threadId,
               tabId,
               downloadId: "guess",
+              sessionId: TEST_SESSION_ID,
             }),
           ),
         ).toBe(true);

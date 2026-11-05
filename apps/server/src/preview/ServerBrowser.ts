@@ -218,6 +218,7 @@ export class ServerBrowser extends Context.Service<
     readonly attachViewer: (input: {
       readonly threadId: string;
       readonly tabId: string;
+      readonly sessionId: string;
       readonly maxWidth: number;
       readonly maxHeight: number;
       readonly quality: number;
@@ -242,6 +243,7 @@ export class ServerBrowser extends Context.Service<
       readonly threadId: string;
       readonly tabId: string;
       readonly downloadId: string;
+      readonly sessionId: string;
     }) => Effect.Effect<Option.Option<{ readonly path: string; readonly fileName: string }>>;
 
     readonly clearProfile: (profileId: string) => Effect.Effect<void, PreviewClearProfileError>;
@@ -252,6 +254,7 @@ export class ServerBrowser extends Context.Service<
 
 interface ViewerState {
   readonly id: string;
+  readonly sessionId: string;
   readonly canOperate: boolean;
   readonly pressedKeys: Map<string, { key: string; code: string }>;
   readonly pressedButtons: Map<"left" | "middle" | "right", { x: number; y: number }>;
@@ -288,6 +291,7 @@ interface ServerTab {
   readonly createdAt: number;
   usedAt: number;
   readonly viewers: Set<ViewerState>;
+  readonly viewerSessionIds: Set<string>;
   readonly consoleEntries: Array<PreviewAutomationConsoleEntry>;
   readonly networkEntries: Array<PreviewAutomationNetworkEntry>;
   readonly actionTimeline: Array<PreviewAutomationActionEvent>;
@@ -852,6 +856,7 @@ const make = Effect.gen(function* () {
       createdAt: Date.now(),
       usedAt: Date.now(),
       viewers: new Set(),
+      viewerSessionIds: new Set(),
       consoleEntries: [],
       networkEntries: [],
       actionTimeline: [],
@@ -1240,9 +1245,9 @@ const make = Effect.gen(function* () {
 
   const openDownload: ServerBrowser["Service"]["openDownload"] = (input) =>
     Effect.sync(() => {
-      const download = tabs
-        .get(tabKey(input.threadId, input.tabId))
-        ?.downloads.find((candidate) => candidate.id === input.downloadId);
+      const tab = tabs.get(tabKey(input.threadId, input.tabId));
+      if (!tab || !tab.viewerSessionIds.has(input.sessionId)) return Option.none();
+      const download = tab.downloads.find((candidate) => candidate.id === input.downloadId);
       return download === undefined
         ? Option.none()
         : Option.some({ path: download.path, fileName: download.fileName });
@@ -2538,6 +2543,7 @@ const make = Effect.gen(function* () {
     };
     const viewer: ViewerState = {
       id: NodeCrypto.randomUUID(),
+      sessionId: input.sessionId,
       canOperate: input.canOperate,
       pressedKeys: new Map(),
       pressedButtons: new Map(),
@@ -2577,6 +2583,7 @@ const make = Effect.gen(function* () {
     yield* Effect.acquireRelease(
       Effect.sync(() => {
         tab.viewers.add(viewer);
+        tab.viewerSessionIds.add(viewer.sessionId);
         reportLiveTabs();
       }),
       () =>
