@@ -3,6 +3,10 @@
  *
  * Ref names contain `/`, so the single-ref endpoints address the ref via
  * the `name` query parameter, not a path segment.
+ *
+ * Read endpoints live in {@link Refs}; mutating endpoints in
+ * {@link RefsWrite}, which carries {@link WriteAuth} middleware so the
+ * consuming application must provide an authentication layer.
  */
 import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint";
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup";
@@ -19,6 +23,7 @@ import {
   RepoNotFound,
   RepoPath,
   PushDenied,
+  WriteAuth,
 } from "./Schema.ts";
 
 /** Lists refs, optionally filtered by prefix (e.g. `refs/heads/`). */
@@ -72,7 +77,13 @@ export const RemoveRef = HttpApiEndpoint.delete("remove", "/repos/:owner/:repo/r
   error: [PushDenied, RepoNotFound, RefNotFound, RefConflict, ReadOnlyRepo],
 });
 
-/** The `refs` group, mounted at `/api/v1`. */
+/** The `refs` read group, mounted at `/api/v1`. */
 export class Refs extends HttpApiGroup.make("refs")
-  .add(ListRefs, GetRef, UpdateRef, RemoveRef)
+  .add(ListRefs, GetRef)
+  .prefix("/api/v1") {}
+
+/** The `refsWrite` group: mutating ref operations, gated by {@link WriteAuth}. */
+export class RefsWrite extends HttpApiGroup.make("refsWrite")
+  .add(UpdateRef, RemoveRef)
+  .middleware(WriteAuth)
   .prefix("/api/v1") {}

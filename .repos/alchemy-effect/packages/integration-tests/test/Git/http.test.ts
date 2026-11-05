@@ -121,7 +121,9 @@ const PrefixedRoutes = Layer.mergeAll(
   HttpApiBuilder.layer(PrefixedApi).pipe(
     Layer.provide(
       HttpApiBuilder.group(PrefixedApi, "refs", (h) =>
-        Effect.map(Git.Handlers, (git) => h.handleAll(git.refs)),
+        Effect.map(Git.Handlers, (git) =>
+          h.handle("list", git.refs.list).handle("get", git.refs.get),
+        ),
       ),
     ),
   ),

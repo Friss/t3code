@@ -9,7 +9,7 @@ import { AppApi, MeLive } from "./api.ts";
 import { GitHubLive } from "./github.ts";
 import { Authentication } from "./middleware.ts";
 import { ProtocolLive } from "./protocol.ts";
-import { RefsLive, PullsLive } from "./ref-writes.ts";
+import { RefsLive, RefsWriteLive, PullsLive } from "./ref-writes.ts";
 
 /** Packs, clone bundles, and spilled pushes. */
 export const GitObjects = Cloudflare.R2.Bucket("GitObjects", {
@@ -24,6 +24,7 @@ const PublicRoutes = HttpApiBuilder.layer(AppApi).pipe(
       MeLive,
       ProtocolLive,
       RefsLive,
+      RefsWriteLive,
       PullsLive,
       GitHubLive,
       HttpApiBuilder.group(AppApi, "repos", (h) =>

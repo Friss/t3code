@@ -720,7 +720,14 @@ export const GroupsLive = Layer.mergeAll(
   HttpApiBuilder.group(GitApi, "repos", (h) =>
     Effect.map(Handlers, (git) => h.handleAll(git.repos)),
   ),
-  HttpApiBuilder.group(GitApi, "refs", (h) => Effect.map(Handlers, (git) => h.handleAll(git.refs))),
+  HttpApiBuilder.group(GitApi, "refs", (h) =>
+    Effect.map(Handlers, (git) => h.handle("list", git.refs.list).handle("get", git.refs.get)),
+  ),
+  HttpApiBuilder.group(GitApi, "refsWrite", (h) =>
+    Effect.map(Handlers, (git) =>
+      h.handle("update", git.refs.update).handle("remove", git.refs.remove),
+    ),
+  ),
   HttpApiBuilder.group(GitApi, "objects", (h) =>
     Effect.map(Handlers, (git) => h.handleAll(git.objects)),
   ),

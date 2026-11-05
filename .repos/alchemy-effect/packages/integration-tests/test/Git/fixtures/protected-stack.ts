@@ -95,9 +95,15 @@ const ProtocolLive = HttpApiBuilder.group(Git.Api, "protocol", (h) =>
 const RefsLive = HttpApiBuilder.group(Git.Api, "refs", (h) =>
   Effect.gen(function* () {
     const handlers = yield* Git.Handlers;
+    return h.handle("list", handlers.refs.list).handle("get", handlers.refs.get);
+  }),
+);
+
+const RefsWriteLive = HttpApiBuilder.group(Git.Api, "refsWrite", (h) =>
+  Effect.gen(function* () {
+    const handlers = yield* Git.Handlers;
     const git = yield* Git.Engine;
     return h.handleAll({
-      ...handlers.refs,
       update: (input) =>
         Effect.gen(function* () {
           const repo = yield* git.repositories
@@ -183,7 +189,7 @@ const PullsLive = HttpApiBuilder.group(Git.Api, "pulls", (h) =>
 
 const ProtectedRoutes = Layer.mergeAll(
   HttpApiBuilder.layer(Git.Api).pipe(
-    Layer.provide(Layer.mergeAll(Git.GroupsLive, GitHubLive, ProtocolLive, RefsLive, PullsLive)),
+    Layer.provide(Layer.mergeAll(Git.GroupsLive, GitHubLive, ProtocolLive, RefsLive, RefsWriteLive, PullsLive)),
     Layer.provide(TestAuthLive),
   ),
   Git.InternalApiLive,

@@ -5,10 +5,12 @@
  * `Refs.ts`, `Objects.ts`, `Pulls.ts`); the assembled `GitApi` lives in
  * `../Api.ts`.
  *
- * The groups carry no middleware and no auth errors of their own: the
- * `HttpApi` you mount them in decides who may call them, and application handlers
- * decide which refs may move.
+ * Read-only groups carry no middleware. Mutating groups carry
+ * {@link WriteAuth}: the consuming application provides the layer that
+ * validates the caller's credential; the engine never holds secrets.
  */
+import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware";
+import * as HttpApiSecurity from "effect/http-api/HttpApiSecurity";
 import * as Schema from "effect/Schema";
 // Pulls in the `httpApiStatus` annotation augmentation used by the error
 // classes below.
@@ -229,6 +231,27 @@ export class MergeConflict extends Schema.TaggedError<MergeConflict>()(
 // ─────────────────────────────────────────────────────────────────────────────
 // Auth middleware
 // ─────────────────────────────────────────────────────────────────────────────
+
+/** 401 — no usable credential on a route that requires one. */
+export class Unauthorized extends Schema.TaggedError<Unauthorized>()(
+  "Unauthorized",
+  {},
+  { httpApiStatus: 401 },
+) {}
+
+/**
+ * Abstract auth gate for mutating endpoints. The consuming application
+ * provides the {@link WriteAuth} layer that validates the caller's
+ * credential; the engine never holds secrets — it only declares that a
+ * write is not anonymous. Accepts Basic (git CLI) and Bearer tokens.
+ */
+export class WriteAuth extends HttpApiMiddleware.Service<WriteAuth>()(
+  "git-service/WriteAuth",
+  {
+    security: { bearer: HttpApiSecurity.bearer, basic: HttpApiSecurity.basic },
+    error: Unauthorized,
+  },
+) {}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain shapes

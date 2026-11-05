@@ -7,10 +7,15 @@ import { checkRefChanges } from "./branch-policy.ts";
 
 export const RefsLive = HttpApiBuilder.group(AppApi, "refs", (h) =>
   Effect.gen(function* () {
-    const git = yield* Git.Engine;
     const defaults = yield* Git.Handlers;
+    return h.handle("list", defaults.refs.list).handle("get", defaults.refs.get);
+  }),
+);
+
+export const RefsWriteLive = HttpApiBuilder.group(AppApi, "refsWrite", (h) =>
+  Effect.gen(function* () {
+    const git = yield* Git.Engine;
     return h.handleAll({
-      ...defaults.refs,
       update: ({ params, query, payload }) =>
         Effect.scoped(
           Effect.gen(function* () {

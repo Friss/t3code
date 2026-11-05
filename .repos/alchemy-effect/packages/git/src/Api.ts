@@ -11,14 +11,16 @@ import * as HttpApi from "effect/http-api/HttpApi";
  * | Group | Path | Routes |
  * | --- | --- | --- |
  * | {@link Repos} | `/api/v1/repos` | create, get, update, list, delete, fork, import, compact |
- * | {@link Refs} | `/api/v1/repos/:owner/:repo/ref(s)` | list, get, update, remove |
+ * | {@link Refs} | `/api/v1/repos/:owner/:repo/ref(s)` | list, get |
+ * | {@link RefsWrite} | `/api/v1/repos/:owner/:repo/ref` | update, remove (WriteAuth) |
  * | {@link Objects} | `/api/v1/repos/:owner/:repo/…` | commit, log, tree, blob, diff, compare, blobRaw, file |
  * | {@link Pulls} | `/api/v1/repos/:owner/:repo/pulls` | create, list, get, update, merge |
  * | {@link Protocol} | `/:owner/:repo/…` | infoRefs, uploadPack, receivePack |
  * | {@link GitHub} | `/api/v3` | the GitHub REST v3 facade |
  *
- * No route carries middleware: apply application HttpRouter middleware to
- * Git.ApiLive when composing the public routes. The engine's own hash route is
+ * Mutating groups carry `WriteAuth` middleware; read-only groups do not.
+ * Apply application HttpRouter middleware to Git.ApiLive when composing
+ * the public routes. The engine's own hash route is
  * {@link InternalApi}, mounted separately. Shared schemas and tagged
  * errors live in `Api/Schema.ts` and are re-exported flatly from here.
  */
@@ -27,7 +29,7 @@ import { GitHub } from "./Api/GitHub.ts";
 import { Objects } from "./Api/Objects.ts";
 import { Protocol } from "./Api/Protocol.ts";
 import { Pulls } from "./Api/Pulls.ts";
-import { Refs } from "./Api/Refs.ts";
+import { Refs, RefsWrite } from "./Api/Refs.ts";
 import { Repos } from "./Api/Repos.ts";
 
 export * from "./Api/Schema.ts";
@@ -47,6 +49,7 @@ export * from "./Api/Repos.ts";
 export class GitApi extends HttpApi.make("git-service")
   .add(Repos)
   .add(Refs)
+  .add(RefsWrite)
   .add(Objects)
   .add(Pulls)
   .add(Protocol)
