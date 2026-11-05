@@ -13,6 +13,7 @@
 import type { NonEmptyReadonlyArray } from "../Array.ts"
 import * as HttpApiEndpoint from "../http-api/HttpApiEndpoint.ts"
 import * as HttpApiGroup from "../http-api/HttpApiGroup.ts"
+import type * as HttpApiMiddleware from "../http-api/HttpApiMiddleware.ts"
 import * as Rpc from "../rpc/Rpc.ts"
 import * as RpcGroup from "../rpc/RpcGroup.ts"
 import * as Schema from "../Schema.ts"
@@ -110,7 +111,7 @@ export type ConvertRpcs<Workflows extends Workflow.Any, Prefix extends string> =
  *
  * ```ts import.meta.vitest
  * import { Layer, Schema } from "effect"
- * import { HttpApi, HttpApiBuilder } from "effect/http-api"
+ * import { HttpApi, HttpApiBuilder, HttpApiMiddleware, HttpApiSecurity } from "effect/http-api"
  * import { Workflow, WorkflowProxy, WorkflowProxyServer } from "effect/workflow"
  *
  * const EmailWorkflow = Workflow.make("EmailWorkflow", {
@@ -123,10 +124,17 @@ export type ConvertRpcs<Workflows extends Workflow.Any, Prefix extends string> =
  *
  * const myWorkflows = [EmailWorkflow] as const
  *
+ * // Define a security middleware
+ * class AuthMiddleware extends HttpApiMiddleware.Service<AuthMiddleware>()("AuthMiddleware", {
+ *   security: {
+ *     bearer: HttpApiSecurity.bearer
+ *   }
+ * }) {}
+ *
  * // Use WorkflowProxy.toHttpApiGroup to create a `HttpApiGroup` from the
- * // workflows
+ * // workflows, with security middleware applied to all endpoints
  * class MyApi extends HttpApi.make("api")
- *   .add(WorkflowProxy.toHttpApiGroup("workflows", myWorkflows))
+ *   .add(WorkflowProxy.toHttpApiGroup("workflows", myWorkflows, { middleware: AuthMiddleware }))
  * {}
  *
  * // Use WorkflowProxyServer.layerHttpApi to create a layer that implements the
@@ -145,7 +153,10 @@ export type ConvertRpcs<Workflows extends Workflow.Any, Prefix extends string> =
  */
 export const toHttpApiGroup = <const Name extends string, const Workflows extends NonEmptyReadonlyArray<Workflow.Any>>(
   name: Name,
-  workflows: Workflows
+  workflows: Workflows,
+  options?: {
+    readonly middleware?: HttpApiMiddleware.AnyService
+  }
 ): HttpApiGroup.HttpApiGroup<Name, ConvertHttpApi<Workflows[number]>> => {
   let group = HttpApiGroup.make(name)
   for (const workflow_ of workflows) {
@@ -165,6 +176,9 @@ export const toHttpApiGroup = <const Name extends string, const Workflows extend
         payload: ResumePayload
       }).annotateMerge(workflow.annotations)
     ) as any
+  }
+  if (options?.middleware) {
+    group = group.middleware(options.middleware) as any
   }
   return group as any
 }
