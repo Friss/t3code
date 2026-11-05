@@ -3,6 +3,7 @@ import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint";
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup";
 import * as HttpApiSchema from "effect/http-api/HttpApiSchema";
 import * as Schema from "effect/Schema";
+import { Authentication } from "./middleware.ts";
 
 // ─── Domain types ────────────────────────────────────────────────────
 
@@ -116,6 +117,7 @@ export class ReposGroup extends HttpApiGroup.make("repos")
   .add(updateRepo)
   .add(deleteRepo)
   .add(starRepo)
-  .add(cloneToken) {}
+  .add(cloneToken)
+  .middleware(Authentication) {}
 
 export class RepoApi extends HttpApi.make("RepoApi").add(ReposGroup) {}

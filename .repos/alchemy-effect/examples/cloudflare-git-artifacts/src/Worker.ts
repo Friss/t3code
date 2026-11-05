@@ -1,4 +1,5 @@
 import * as Cloudflare from "@alchemy.run/cloudflare";
+import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 import * as Etag from "effect/http/Etag";
@@ -15,8 +16,16 @@ import {
   RepoInfo,
   RepoNotFound,
 } from "./Api.ts";
+import { ApiToken, Authentication } from "./middleware.ts";
 import Repo from "./Repo.ts";
 import { Repos } from "./Repos.ts";
+
+const ApiTokenLive = Layer.effect(
+  ApiToken,
+  Effect.gen(function* () {
+    return yield* Config.redacted("API_TOKEN");
+  }),
+);
 
 // Workers don't have a FileSystem, so HttpPlatform's file-response surface
 // is stubbed. The repo API never serves files.
@@ -156,6 +165,8 @@ export default class Worker extends Cloudflare.Worker<Worker>()(
     return {
       fetch: HttpApiBuilder.layer(RepoApi).pipe(
         Layer.provide(handlers),
+        Layer.provide(Authentication.layer),
+        Layer.provide(ApiTokenLive),
         Layer.provide([Etag.layer, HttpPlatformStub, Path.layer]),
         HttpRouter.toHttpEffect,
       ),

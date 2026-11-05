@@ -3,6 +3,9 @@ import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Test from "@alchemy.run/test/Bun";
 import * as Effect from "effect/Effect";
 import * as HttpApiClient from "effect/http-api/HttpApiClient";
+import * as HttpClient from "effect/http/HttpClient";
+import * as HttpClientRequest from "effect/http/HttpClientRequest";
+import * as Layer from "effect/Layer";
 import Stack from "../alchemy.run.ts";
 import { RepoApi } from "../src/Api.ts";
 
@@ -22,7 +25,21 @@ test(
   "repo lifecycle",
   Effect.gen(function* () {
     const { url } = yield* stack;
-    const client = yield* HttpApiClient.make(RepoApi, { baseUrl: url });
+    const apiToken = process.env.API_TOKEN;
+    if (!apiToken) throw new Error("API_TOKEN env var is required for integration tests");
+    const client = yield* HttpApiClient.make(RepoApi, { baseUrl: url }).pipe(
+      Effect.provide(
+        Layer.effect(
+          HttpClient.HttpClient,
+          Effect.map(
+            HttpClient.HttpClient,
+            HttpClient.mapRequest(
+              HttpClientRequest.setHeader("authorization", `Bearer ${apiToken}`),
+            ),
+          ),
+        ),
+      ),
+    );
 
     // Purge any leftover from a previously crashed run so createRepo
     // doesn't fail with RepoConflict.
