@@ -1,6 +1,8 @@
 import * as HttpApi from "effect/http-api/HttpApi";
 import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint";
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup";
+import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware";
+import * as HttpApiSecurity from "effect/http-api/HttpApiSecurity";
 import * as Schema from "effect/Schema";
 
 /**
@@ -33,6 +35,20 @@ export class OrderNotFound extends Schema.TaggedError<OrderNotFound>()(
   { httpApiStatus: 404 },
 ) {}
 
+export class Unauthorized extends Schema.TaggedError<Unauthorized>()(
+  "Unauthorized",
+  {},
+  { httpApiStatus: 401 },
+) {}
+
+export class Authentication extends HttpApiMiddleware.Service<Authentication>()(
+  "StoreApi/Authentication",
+  {
+    security: { bearer: HttpApiSecurity.bearer },
+    error: Unauthorized,
+  },
+) {}
+
 const Id = Schema.Struct({ id: Schema.String });
 
 /** `GET /products/*` — read-only catalog. */
@@ -51,7 +67,8 @@ export class OrdersGroup extends HttpApiGroup.make("orders")
     }),
   )
   .add(HttpApiEndpoint.get("get", "/:id", { params: Id, success: Order, error: OrderNotFound }))
-  .prefix("/orders") {}
+  .prefix("/orders")
+  .middleware(Authentication) {}
 
 /** `/admin/*` — catalog writes. */
 export class AdminGroup extends HttpApiGroup.make("admin")
@@ -62,7 +79,8 @@ export class AdminGroup extends HttpApiGroup.make("admin")
       success: Product,
     }),
   )
-  .prefix("/admin") {}
+  .prefix("/admin")
+  .middleware(Authentication) {}
 
 /** The public surface — what a client sees at the one URL. */
 export class StoreApi extends HttpApi.make("StoreApi")
