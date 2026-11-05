@@ -20,8 +20,15 @@ const handlers = {
         });
       const { threadId, ...refs } = input;
       const {
+        caller,
         projection: { thread },
       } = yield* readThread(threadId);
+      if (caller !== undefined && thread.projectId !== caller.projectId) {
+        return yield* new OrchestratorMcpFailure({
+          code: "thread_not_found",
+          message: "The thread was not found.",
+        });
+      }
       const projects = yield* Project.ProjectService;
       const project = yield* projects.getById(thread.projectId).pipe(Effect.mapError(unavailable));
       if (Option.isNone(project))
