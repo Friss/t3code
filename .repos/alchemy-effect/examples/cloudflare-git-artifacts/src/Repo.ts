@@ -2,6 +2,7 @@ import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Effect from "effect/Effect";
 
 export type Metadata = {
+  owner: string;
   description: string;
   topics: string[];
   stars: number;
@@ -23,10 +24,11 @@ export default class Repo extends Cloudflare.DurableObject<Repo>()(
       });
 
       return {
-        init: (description: string) =>
+        init: (description: string, owner: string) =>
           Effect.gen(function* () {
             if (meta !== null) return meta;
             meta = {
+              owner,
               description,
               topics: [],
               stars: 0,

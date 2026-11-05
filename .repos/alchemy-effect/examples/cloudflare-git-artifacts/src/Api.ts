@@ -1,7 +1,10 @@
+import * as Context from "effect/Context";
 import * as HttpApi from "effect/http-api/HttpApi";
 import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint";
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup";
+import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware";
 import * as HttpApiSchema from "effect/http-api/HttpApiSchema";
+import * as HttpApiSecurity from "effect/http-api/HttpApiSecurity";
 import * as Schema from "effect/Schema";
 
 // ─── Domain types ────────────────────────────────────────────────────
@@ -49,6 +52,32 @@ export class RepoNotFound extends Schema.TaggedErrorClass<RepoNotFound>()("RepoN
 
 export class RepoConflict extends Schema.TaggedErrorClass<RepoConflict>()("RepoConflict", {
   message: Schema.String,
+}) {}
+
+export class Unauthorized extends Schema.TaggedError<Unauthorized>()(
+  "Unauthorized",
+  {},
+  { httpApiStatus: 401 },
+) {}
+
+// ─── Auth ───────────────────────────────────────────────────────────
+
+export const User = Schema.Struct({
+  id: Schema.String,
+});
+
+export class Session extends Context.Service<Session, { readonly user: typeof User.Type }>()(
+  "app/Session",
+) {}
+
+export class Authentication extends HttpApiMiddleware.Service<
+  Authentication,
+  { provides: Session }
+>()("app/Authentication", {
+  security: {
+    bearer: HttpApiSecurity.bearer,
+  },
+  error: Unauthorized,
 }) {}
 
 // ─── Path / payload schemas ──────────────────────────────────────────
@@ -116,6 +145,7 @@ export class ReposGroup extends HttpApiGroup.make("repos")
   .add(updateRepo)
   .add(deleteRepo)
   .add(starRepo)
-  .add(cloneToken) {}
+  .add(cloneToken)
+  .middleware(Authentication) {}
 
 export class RepoApi extends HttpApi.make("RepoApi").add(ReposGroup) {}
