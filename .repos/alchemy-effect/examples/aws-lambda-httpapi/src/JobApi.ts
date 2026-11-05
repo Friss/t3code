@@ -6,6 +6,7 @@ import * as HttpApiGroup from "effect/http-api/HttpApiGroup";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
+import { Authentication } from "./Authentication.ts";
 import { Job, JobId } from "./Job.ts";
 import { JobNotifications, NotifyJobError } from "./JobNotifications.ts";
 import { GetJobError, JobStorage, PutJobError } from "./JobStorage.ts";
@@ -24,7 +25,9 @@ export const createJob = HttpApiEndpoint.post("createJob", "/", {
   }),
 });
 
-export const JobApi = HttpApi.make("JobApi").add(HttpApiGroup.make("Jobs").add(getJob, createJob));
+export const JobApi = HttpApi.make("JobApi").add(
+  HttpApiGroup.make("Jobs").add(getJob, createJob).middleware(Authentication),
+);
 
 export const JobApiLive = HttpApiBuilder.layer(JobApi).pipe(
   Layer.provide(
@@ -93,4 +96,5 @@ export const JobApiLive = HttpApiBuilder.layer(JobApi).pipe(
       }),
     ),
   ),
+  Layer.provide(Authentication.layer),
 );
