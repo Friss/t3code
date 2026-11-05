@@ -12,6 +12,7 @@
  */
 import * as HttpApiEndpoint from "../http-api/HttpApiEndpoint.ts"
 import * as HttpApiGroup from "../http-api/HttpApiGroup.ts"
+import type * as HttpApiMiddleware from "../http-api/HttpApiMiddleware.ts"
 import * as Rpc from "../rpc/Rpc.ts"
 import * as RpcGroup from "../rpc/RpcGroup.ts"
 import * as Schema from "../Schema.ts"
@@ -187,18 +188,21 @@ const entityIdPath = {
  */
 export const toHttpApiGroup = <const Name extends string, Type extends string, Rpcs extends Rpc.Any>(
   name: Name,
-  entity: Entity.Entity<Type, Rpcs>
+  entity: Entity.Entity<Type, Rpcs>,
+  options?: {
+    readonly middleware?: ReadonlyArray<HttpApiMiddleware.AnyService>
+  }
 ): HttpApiGroup.HttpApiGroup<Name, ConvertHttpApi<Rpcs>> => {
   let group = HttpApiGroup.make(name)
   for (const parentRpc_ of entity.protocol.requests.values()) {
     const parentRpc = parentRpc_ as any as Rpc.AnyWithProps
-    const endpoint = HttpApiEndpoint.post(parentRpc._tag, `/${tagToPath(parentRpc._tag)}/:entityId`, {
+    let endpoint: HttpApiEndpoint.Any = HttpApiEndpoint.post(parentRpc._tag, `/${tagToPath(parentRpc._tag)}/:entityId`, {
       params: entityIdPath,
       payload: parentRpc.payloadSchema,
       success: parentRpc.successSchema,
       error: [parentRpc.errorSchema, ...requestErrors]
     }).annotateMerge(parentRpc.annotations)
-    const endpointDiscard = HttpApiEndpoint.post(
+    let endpointDiscard: HttpApiEndpoint.Any = HttpApiEndpoint.post(
       `${parentRpc._tag}Discard`,
       `/${tagToPath(parentRpc._tag)}/:entityId/discard`,
       {
@@ -207,6 +211,13 @@ export const toHttpApiGroup = <const Name extends string, Type extends string, R
         error: clientErrors
       }
     ).annotateMerge(parentRpc.annotations)
+
+    if (options?.middleware) {
+      for (const mw of options.middleware) {
+        endpoint = endpoint.middleware(mw as any)
+        endpointDiscard = endpointDiscard.middleware(mw as any)
+      }
+    }
 
     group = group.add(endpoint).add(endpointDiscard) as any
   }
