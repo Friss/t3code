@@ -5,10 +5,14 @@
  * `Refs.ts`, `Objects.ts`, `Pulls.ts`); the assembled `GitApi` lives in
  * `../Api.ts`.
  *
- * The groups carry no middleware and no auth errors of their own: the
- * `HttpApi` you mount them in decides who may call them, and application handlers
- * decide which refs may move.
+ * Mutating groups carry `GitAuth` middleware so that callers must present
+ * a credential; the consuming `HttpApi` provides the `GitAuth` layer that
+ * resolves tokens.  Application handlers decide which refs may move.
  */
+import * as Context from "effect/Context";
+import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware";
+import * as HttpApiSecurity from "effect/http-api/HttpApiSecurity";
+import * as Redacted from "effect/Redacted";
 import * as Schema from "effect/Schema";
 // Pulls in the `httpApiStatus` annotation augmentation used by the error
 // classes below.
@@ -229,6 +233,32 @@ export class MergeConflict extends Schema.TaggedError<MergeConflict>()(
 // ─────────────────────────────────────────────────────────────────────────────
 // Auth middleware
 // ─────────────────────────────────────────────────────────────────────────────
+
+/** 401 — no usable credential on a route that requires one. */
+export class Unauthorized extends Schema.TaggedError<Unauthorized>()(
+  "Unauthorized",
+  {},
+  { httpApiStatus: 401 },
+) {}
+
+/** Caller identity resolved by the auth layer from a Bearer or Basic token. */
+export class Credentials extends Context.Service<Credentials, {
+  readonly token: Redacted.Redacted<string>;
+}>()("git-service/Credentials") {}
+
+/**
+ * Auth middleware required by mutating groups (DESIGN.md §8).  Accepts
+ * Bearer or Basic (git CLI sends the token in the password field).  The
+ * consuming application provides the `GitAuth` layer that resolves and
+ * validates the presented credential.
+ */
+export class GitAuth extends HttpApiMiddleware.Service<GitAuth, { provides: Credentials }>()(
+  "git-service/GitAuth",
+  {
+    security: { bearer: HttpApiSecurity.bearer, basic: HttpApiSecurity.basic },
+    error: Unauthorized,
+  },
+) {}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain shapes

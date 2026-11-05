@@ -17,8 +17,9 @@ import * as HttpApi from "effect/http-api/HttpApi";
  * | {@link Protocol} | `/:owner/:repo/…` | infoRefs, uploadPack, receivePack |
  * | {@link GitHub} | `/api/v3` | the GitHub REST v3 facade |
  *
- * No route carries middleware: apply application HttpRouter middleware to
- * Git.ApiLive when composing the public routes. The engine's own hash route is
+ * Mutating groups carry `GitAuth` middleware; the consuming application must
+ * provide a `GitAuth` layer.  Read-only groups carry no middleware: apply
+ * application `HttpRouter` middleware to `Git.ApiLive` for them. The engine's own hash route is
  * {@link InternalApi}, mounted separately. Shared schemas and tagged
  * errors live in `Api/Schema.ts` and are re-exported flatly from here.
  */
