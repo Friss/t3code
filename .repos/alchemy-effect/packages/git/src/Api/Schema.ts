@@ -5,14 +5,18 @@
  * `Refs.ts`, `Objects.ts`, `Pulls.ts`); the assembled `GitApi` lives in
  * `../Api.ts`.
  *
- * The groups carry no middleware and no auth errors of their own: the
- * `HttpApi` you mount them in decides who may call them, and application handlers
- * decide which refs may move.
+ * The `protocol` group carries {@link ProtocolAuth} middleware so that
+ * write endpoints (receive-pack) require authentication; the application
+ * provides the implementation via `ProtocolAuth.layer`. Other groups carry
+ * no middleware: the `HttpApi` you mount them in decides who may call them,
+ * and application handlers decide which refs may move.
  */
 import * as Schema from "effect/Schema";
 // Pulls in the `httpApiStatus` annotation augmentation used by the error
 // classes below.
 import "effect/http-api/HttpApiSchema";
+import * as HttpApiMiddleware from "effect/http-api/HttpApiMiddleware";
+import * as HttpApiSecurity from "effect/http-api/HttpApiSecurity";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Primitives
@@ -229,6 +233,30 @@ export class MergeConflict extends Schema.TaggedError<MergeConflict>()(
 // ─────────────────────────────────────────────────────────────────────────────
 // Auth middleware
 // ─────────────────────────────────────────────────────────────────────────────
+
+/** 401 — no usable credential on a route that requires authentication. */
+export class Unauthorized extends Schema.TaggedError<Unauthorized>()(
+  "Unauthorized",
+  {},
+  { httpApiStatus: 401 },
+) {}
+
+/**
+ * Authentication middleware for the git wire protocol group.
+ *
+ * The library declares the requirement; the application provides the
+ * implementation via `ProtocolAuth.layer`. A typical implementation
+ * resolves the caller's identity, allows anonymous access for read
+ * operations (`Git.isRead`), and rejects unauthenticated writes with
+ * {@link Unauthorized}.
+ */
+export class ProtocolAuth extends HttpApiMiddleware.Service<ProtocolAuth>()(
+  "git/ProtocolAuth",
+  {
+    security: { bearer: HttpApiSecurity.bearer },
+    error: Unauthorized,
+  },
+) {}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain shapes

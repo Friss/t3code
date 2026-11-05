@@ -8,7 +8,7 @@ import * as HttpApiGroup from "effect/http-api/HttpApiGroup";
  *
  * `:repo` may carry a `.git` suffix; the handlers strip it.
  */
-import { RepoPath, RepoNotFound, PushDenied } from "./Schema.ts";
+import { RepoPath, RepoNotFound, PushDenied, Unauthorized, ProtocolAuth } from "./Schema.ts";
 
 /** `GET /:owner/:repo/info/refs?service=…`: the ref advertisement. */
 export const InfoRefs = HttpApiEndpoint.get("infoRefs", "/:owner/:repo/info/refs", {
@@ -25,10 +25,10 @@ export const UploadPack = HttpApiEndpoint.post("uploadPack", "/:owner/:repo/git-
 /** `POST /:owner/:repo/git-receive-pack`: push. */
 export const ReceivePack = HttpApiEndpoint.post("receivePack", "/:owner/:repo/git-receive-pack", {
   params: RepoPath,
-  error: [RepoNotFound, PushDenied],
+  error: [RepoNotFound, PushDenied, Unauthorized],
 });
 
 /** The git wire protocol, mounted at the root. */
 export class Protocol extends HttpApiGroup.make("protocol", {
   topLevel: true,
-}).add(InfoRefs, UploadPack, ReceivePack) {}
+}).add(InfoRefs, UploadPack, ReceivePack).middleware(ProtocolAuth) {}
