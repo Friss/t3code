@@ -16,9 +16,9 @@ const kvPut = (key: string, value: string) =>
     catch: (cause) => new Error(String(cause)),
   }).pipe(Effect.orDie);
 
-export const FrontendHandlers = HttpApiBuilder.group(
+export const PublicHandlers = HttpApiBuilder.group(
   FrontendApi,
-  "frontend",
+  "public",
   Effect.fn(function* (handlers) {
     const client = yield* BackendClient;
 
@@ -35,18 +35,28 @@ export const FrontendHandlers = HttpApiBuilder.group(
           Effect.orDie,
         ),
       )
+      .handle("getKv", ({ params }) =>
+        kvGet(params.key).pipe(Effect.map((value) => new KvValue({ value }))),
+      )
+      .handle("putKv", ({ params, payload }) =>
+        kvPut(params.key, payload).pipe(Effect.as(new KvOk({ ok: true }))),
+      );
+  }),
+);
+
+export const NotesHandlers = HttpApiBuilder.group(
+  FrontendApi,
+  "notes",
+  Effect.fn(function* (handlers) {
+    const client = yield* BackendClient;
+
+    return handlers
       .handle("listNotes", () => client.Backend.listNotes().pipe(Effect.orDie))
       .handle("createNote", ({ payload }) =>
         client.Backend.createNote({ payload }).pipe(Effect.orDie),
       )
       .handle("deleteNote", ({ params }) =>
         client.Backend.deleteNote({ params }).pipe(Effect.orDie),
-      )
-      .handle("getKv", ({ params }) =>
-        kvGet(params.key).pipe(Effect.map((value) => new KvValue({ value }))),
-      )
-      .handle("putKv", ({ params, payload }) =>
-        kvPut(params.key, payload).pipe(Effect.as(new KvOk({ ok: true }))),
       );
   }),
 );

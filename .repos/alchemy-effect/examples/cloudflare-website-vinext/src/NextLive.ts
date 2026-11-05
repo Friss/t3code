@@ -5,9 +5,10 @@ import * as HttpPlatform from "effect/http/HttpPlatform";
 import * as HttpRouter from "effect/http/HttpRouter";
 import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
+import { Authentication } from "./Authentication";
 import { BackendClient } from "./BackendClient";
 import { FrontendApi } from "./NextApi";
-import { FrontendHandlers } from "./NextHandlers";
+import { NotesHandlers, PublicHandlers } from "./NextHandlers";
 
 const platformLayer = Layer.mergeAll(
   Etag.layer,
@@ -17,7 +18,11 @@ const platformLayer = Layer.mergeAll(
 );
 
 const FrontendLive = HttpApiBuilder.layer(FrontendApi).pipe(
-  Layer.provide(FrontendHandlers.pipe(Layer.provide(BackendClient.Default))),
+  Layer.provide([
+    PublicHandlers.pipe(Layer.provide(BackendClient.Default)),
+    NotesHandlers.pipe(Layer.provide(BackendClient.Default)),
+  ]),
+  Layer.provide(Authentication.layer),
   Layer.provide(platformLayer),
 );
 

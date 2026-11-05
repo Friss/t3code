@@ -3,6 +3,7 @@ import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint";
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup";
 import * as HttpApiSchema from "effect/http-api/HttpApiSchema";
 import * as Schema from "effect/Schema";
+import { Authentication } from "./Authentication";
 import { Note, NotesList } from "./BackendApi";
 
 export class Hello extends Schema.Class<Hello>("Hello")({
@@ -20,24 +21,9 @@ export class KvOk extends Schema.Class<KvOk>("KvOk")({
 
 export class FrontendApi extends HttpApi.make("FrontendApi")
   .add(
-    HttpApiGroup.make("frontend", { topLevel: true }).add(
+    HttpApiGroup.make("public", { topLevel: true }).add(
       HttpApiEndpoint.get("hello", "/hello", {
         success: Hello,
-      }),
-      HttpApiEndpoint.get("listNotes", "/notes", {
-        success: NotesList,
-      }),
-      HttpApiEndpoint.post("createNote", "/notes", {
-        payload: Schema.Struct({
-          title: Schema.String,
-        }),
-        success: Note.pipe(HttpApiSchema.status(201)),
-      }),
-      HttpApiEndpoint.delete("deleteNote", "/notes/:id", {
-        params: Schema.Struct({
-          id: Schema.String,
-        }),
-        success: HttpApiSchema.NoContent,
       }),
       HttpApiEndpoint.get("getKv", "/kv/:key", {
         params: Schema.Struct({
@@ -53,5 +39,24 @@ export class FrontendApi extends HttpApi.make("FrontendApi")
         success: KvOk.pipe(HttpApiSchema.status(201)),
       }),
     ),
+    HttpApiGroup.make("notes", { topLevel: true })
+      .add(
+        HttpApiEndpoint.get("listNotes", "/notes", {
+          success: NotesList,
+        }),
+        HttpApiEndpoint.post("createNote", "/notes", {
+          payload: Schema.Struct({
+            title: Schema.String,
+          }),
+          success: Note.pipe(HttpApiSchema.status(201)),
+        }),
+        HttpApiEndpoint.delete("deleteNote", "/notes/:id", {
+          params: Schema.Struct({
+            id: Schema.String,
+          }),
+          success: HttpApiSchema.NoContent,
+        }),
+      )
+      .middleware(Authentication),
   )
   .prefix("/api") {}
