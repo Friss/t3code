@@ -3,6 +3,7 @@ import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint";
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup";
 import * as HttpApiSchema from "effect/http-api/HttpApiSchema";
 import * as Schema from "effect/Schema";
+import { Authentication } from "./Authentication";
 import { Note, NotesList } from "./BackendApi";
 
 export class Hello extends Schema.Class<Hello>("Hello")({
@@ -18,40 +19,46 @@ export class KvOk extends Schema.Class<KvOk>("KvOk")({
   ok: Schema.Boolean,
 }) {}
 
-export class FrontendApi extends HttpApi.make("FrontendApi")
+export class PublicGroup extends HttpApiGroup.make("public", { topLevel: true }).add(
+  HttpApiEndpoint.get("hello", "/hello", {
+    success: Hello,
+  }),
+  HttpApiEndpoint.get("listNotes", "/notes", {
+    success: NotesList,
+  }),
+  HttpApiEndpoint.post("createNote", "/notes", {
+    payload: Schema.Struct({
+      title: Schema.String,
+    }),
+    success: Note.pipe(HttpApiSchema.status(201)),
+  }),
+) {}
+
+export class ProtectedGroup extends HttpApiGroup
+  .make("protected", { topLevel: true })
   .add(
-    HttpApiGroup.make("frontend", { topLevel: true }).add(
-      HttpApiEndpoint.get("hello", "/hello", {
-        success: Hello,
+    HttpApiEndpoint.delete("deleteNote", "/notes/:id", {
+      params: Schema.Struct({
+        id: Schema.String,
       }),
-      HttpApiEndpoint.get("listNotes", "/notes", {
-        success: NotesList,
+      success: HttpApiSchema.NoContent,
+    }),
+    HttpApiEndpoint.get("getKv", "/kv/:key", {
+      params: Schema.Struct({
+        key: Schema.String,
       }),
-      HttpApiEndpoint.post("createNote", "/notes", {
-        payload: Schema.Struct({
-          title: Schema.String,
-        }),
-        success: Note.pipe(HttpApiSchema.status(201)),
+      success: KvValue,
+    }),
+    HttpApiEndpoint.put("putKv", "/kv/:key", {
+      params: Schema.Struct({
+        key: Schema.String,
       }),
-      HttpApiEndpoint.delete("deleteNote", "/notes/:id", {
-        params: Schema.Struct({
-          id: Schema.String,
-        }),
-        success: HttpApiSchema.NoContent,
-      }),
-      HttpApiEndpoint.get("getKv", "/kv/:key", {
-        params: Schema.Struct({
-          key: Schema.String,
-        }),
-        success: KvValue,
-      }),
-      HttpApiEndpoint.put("putKv", "/kv/:key", {
-        params: Schema.Struct({
-          key: Schema.String,
-        }),
-        payload: Schema.String.pipe(HttpApiSchema.asText()),
-        success: KvOk.pipe(HttpApiSchema.status(201)),
-      }),
-    ),
+      payload: Schema.String.pipe(HttpApiSchema.asText()),
+      success: KvOk.pipe(HttpApiSchema.status(201)),
+    }),
   )
+  .middleware(Authentication) {}
+
+export class FrontendApi extends HttpApi.make("FrontendApi")
+  .add(PublicGroup, ProtectedGroup)
   .prefix("/api") {}
