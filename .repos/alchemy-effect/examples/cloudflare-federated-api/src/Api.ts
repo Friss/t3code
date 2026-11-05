@@ -2,6 +2,7 @@ import * as HttpApi from "effect/http-api/HttpApi";
 import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint";
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup";
 import * as Schema from "effect/Schema";
+import { Authentication, Unauthorized } from "./Auth.ts";
 
 /**
  * One API, defined once. Each group is served by its own Worker (see
@@ -16,6 +17,7 @@ export class Product extends Schema.Class<Product>("Product")({
 
 export class Order extends Schema.Class<Order>("Order")({
   id: Schema.String,
+  ownerId: Schema.String,
   productId: Schema.String,
   quantity: Schema.Number,
   total: Schema.Number,
@@ -50,7 +52,8 @@ export class OrdersGroup extends HttpApiGroup.make("orders")
       error: ProductNotFound,
     }),
   )
-  .add(HttpApiEndpoint.get("get", "/:id", { params: Id, success: Order, error: OrderNotFound }))
+  .add(HttpApiEndpoint.get("get", "/:id", { params: Id, success: Order, error: [OrderNotFound, Unauthorized] }))
+  .middleware(Authentication)
   .prefix("/orders") {}
 
 /** `/admin/*` — catalog writes. */

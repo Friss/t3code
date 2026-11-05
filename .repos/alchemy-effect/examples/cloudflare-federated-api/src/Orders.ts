@@ -5,6 +5,7 @@ import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 import * as HttpRouter from "effect/http/HttpRouter";
 import * as Layer from "effect/Layer";
 import { Order, OrderNotFound, OrdersApi, Product, ProductNotFound } from "./Api.ts";
+import { CurrentUser, Unauthorized } from "./Auth.ts";
 import { Catalog, HOSTNAME, OrderBook } from "./Store.ts";
 
 /** `/orders/*` — reads the catalog, reads and writes orders. */
@@ -27,6 +28,7 @@ export default class Orders extends Cloudflare.Worker<Orders>()(
               handlers
                 .handle("create", ({ payload }) =>
                   Effect.gen(function* () {
+                    const user = yield* CurrentUser;
                     const product = yield* catalog
                       .get<Product>(payload.productId, "json")
                       .pipe(Effect.orDie);
@@ -35,6 +37,7 @@ export default class Orders extends Cloudflare.Worker<Orders>()(
                     }
                     const order = new Order({
                       id: crypto.randomUUID(),
+                      ownerId: user.id,
                       productId: product.id,
                       quantity: payload.quantity,
                       total: product.price * payload.quantity,
@@ -44,14 +47,19 @@ export default class Orders extends Cloudflare.Worker<Orders>()(
                   }),
                 )
                 .handle("get", ({ params }) =>
-                  orders.get<Order>(params.id, "json").pipe(
-                    Effect.orDie,
-                    Effect.flatMap((order) =>
-                      order
-                        ? Effect.succeed(new Order(order))
-                        : Effect.fail(new OrderNotFound({ id: params.id })),
-                    ),
-                  ),
+                  Effect.gen(function* () {
+                    const user = yield* CurrentUser;
+                    const order = yield* orders
+                      .get<Order>(params.id, "json")
+                      .pipe(Effect.orDie);
+                    if (!order) {
+                      return yield* Effect.fail(new OrderNotFound({ id: params.id }));
+                    }
+                    if (order.ownerId !== user.id) {
+                      return yield* Effect.fail(new Unauthorized());
+                    }
+                    return new Order(order);
+                  }),
                 ),
             ),
           ),
