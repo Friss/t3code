@@ -13,6 +13,7 @@ import * as HttpApiGroup from "effect/http-api/HttpApiGroup";
 import * as Schema from "effect/Schema";
 import {
   BranchMissing,
+  GitAuth,
   MergeConflict,
   MergeResult,
   NothingToMerge,
@@ -131,4 +132,5 @@ export const MergePull = HttpApiEndpoint.post("merge", "/repos/:owner/:repo/pull
 /** The `pulls` group, mounted at `/api/v1`. */
 export class Pulls extends HttpApiGroup.make("pulls")
   .add(CreatePull, ListPulls, GetPull, UpdatePull, MergePull)
+  .middleware(GitAuth)
   .prefix("/api/v1") {}

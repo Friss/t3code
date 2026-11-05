@@ -9,6 +9,7 @@ import * as HttpApiGroup from "effect/http-api/HttpApiGroup";
 import * as HttpApiSchema from "effect/http-api/HttpApiSchema";
 import * as Schema from "effect/Schema";
 import {
+  GitAuth,
   ObjectNotFound,
   Oid,
   ReadOnlyRepo,
@@ -75,4 +76,5 @@ export const RemoveRef = HttpApiEndpoint.delete("remove", "/repos/:owner/:repo/r
 /** The `refs` group, mounted at `/api/v1`. */
 export class Refs extends HttpApiGroup.make("refs")
   .add(ListRefs, GetRef, UpdateRef, RemoveRef)
+  .middleware(GitAuth)
   .prefix("/api/v1") {}

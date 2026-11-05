@@ -8,6 +8,7 @@ import * as HttpApiGroup from "effect/http-api/HttpApiGroup";
 import * as HttpApiSchema from "effect/http-api/HttpApiSchema";
 import * as Schema from "effect/Schema";
 import {
+  GitAuth,
   ImportFailed,
   OwnerName,
   Paginated,
@@ -140,4 +141,5 @@ export const CompactRepo = HttpApiEndpoint.post("compact", "/repos/:owner/:repo/
 /** The `repos` group, mounted at `/api/v1`. */
 export class Repos extends HttpApiGroup.make("repos")
   .add(CreateRepo, GetRepo, UpdateRepo, ListRepos, DeleteRepo, ForkRepo, ImportRepo, CompactRepo)
+  .middleware(GitAuth)
   .prefix("/api/v1") {}

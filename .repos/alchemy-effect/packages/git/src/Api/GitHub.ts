@@ -6,6 +6,7 @@
  */
 import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint";
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup";
+import { GitAuth } from "./Schema.ts";
 
 /** `GET /user`: the credential probe `gh` makes; answer it from your own user record. */
 export const GitHubUser = HttpApiEndpoint.get("user", "/user", {});
@@ -71,4 +72,5 @@ export class GitHub extends HttpApiGroup.make("github")
     GitHubMergePull,
     GitHubPullFiles,
   )
+  .middleware(GitAuth)
   .prefix("/api/v3") {}

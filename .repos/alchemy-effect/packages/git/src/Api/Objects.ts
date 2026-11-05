@@ -11,6 +11,7 @@ import {
   CommitDiff,
   CommitInfo,
   Comparison,
+  GitAuth,
   NoMergeBase,
   ObjectNotFound,
   ObjectTooLarge,
@@ -113,4 +114,5 @@ export const GetFile = HttpApiEndpoint.get("file", "/repos/:owner/:repo/file", {
 /** The `objects` group, mounted at `/api/v1`. */
 export class Objects extends HttpApiGroup.make("objects")
   .add(GetCommit, GetLog, GetTree, GetBlob, GetDiff, Compare, GetBlobRaw, GetFile)
+  .middleware(GitAuth)
   .prefix("/api/v1") {}
