@@ -76,6 +76,7 @@ export const JobStorageDynamoDB = Layer.provideMerge(
           Item: {
             id: { S: job.id },
             content: { S: job.content },
+            ownerId: { S: job.ownerId },
           },
         }).pipe(
           Effect.map(() => job),
@@ -103,6 +104,7 @@ export const JobStorageDynamoDB = Layer.provideMerge(
                     ({
                       id: item.Item?.id?.S ?? jobId,
                       content: item.Item?.content?.S ?? "",
+                      ownerId: item.Item?.ownerId?.S ?? "",
                     }) as Job,
                   catch: (cause) =>
                     new GetJobError({

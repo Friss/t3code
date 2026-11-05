@@ -8,6 +8,7 @@ export const JobId = S.String.annotate({
 export class Job extends S.Class<Job>("Job")({
   id: JobId,
   content: S.String,
+  ownerId: S.String,
 }) {}
 
 export const decodeJob = S.decodeEffect(Job);

@@ -3,12 +3,24 @@ import * as HttpApi from "effect/http-api/HttpApi";
 import * as HttpApiBuilder from "effect/http-api/HttpApiBuilder";
 import * as HttpApiEndpoint from "effect/http-api/HttpApiEndpoint";
 import * as HttpApiGroup from "effect/http-api/HttpApiGroup";
+import * as HttpServerRequest from "effect/http/HttpServerRequest";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 import { Job, JobId } from "./Job.ts";
 import { JobNotifications, NotifyJobError } from "./JobNotifications.ts";
 import { GetJobError, JobStorage, PutJobError } from "./JobStorage.ts";
+
+const authenticateCaller = Effect.flatMap(
+  HttpServerRequest.HttpServerRequest,
+  (httpReq) => {
+    const token = httpReq.headers["authorization"];
+    if (!token) {
+      return Effect.fail("missing" as const);
+    }
+    return Effect.succeed(token);
+  },
+);
 
 export const getJob = HttpApiEndpoint.get("getJob", "/", {
   success: Job,
@@ -37,6 +49,16 @@ export const JobApiLive = HttpApiBuilder.layer(JobApi).pipe(
           .handle(
             "getJob",
             Effect.fn(function* (req) {
+              const callerId = yield* authenticateCaller.pipe(
+                Effect.catchAll(() =>
+                  Effect.succeed(undefined),
+                ),
+              );
+              if (!callerId) {
+                return HttpServerResponse.text("Unauthorized", {
+                  status: 401,
+                });
+              }
               if (!req.query.jobId) {
                 return HttpServerResponse.text("Job ID is required", {
                   status: 400,
@@ -56,22 +78,33 @@ export const JobApiLive = HttpApiBuilder.layer(JobApi).pipe(
                   status: 500,
                 });
               }
-              if (!job) {
+              if (!job || job.ownerId !== callerId) {
                 return HttpServerResponse.text("Job not found", {
                   status: 404,
                 });
               }
-              return job!;
+              return job;
             }),
           )
           .handle(
             "createJob",
             Effect.fn(function* (req) {
+              const callerId = yield* authenticateCaller.pipe(
+                Effect.catchAll(() =>
+                  Effect.succeed(undefined),
+                ),
+              );
+              if (!callerId) {
+                return HttpServerResponse.text("Unauthorized", {
+                  status: 401,
+                });
+              }
               const jobId = crypto.randomUUID();
               const job = yield* jobService
                 .putJob({
                   id: jobId,
                   content: req.payload.content,
+                  ownerId: callerId,
                 })
                 .pipe(Effect.catchTag("PutJobError", (error) => Effect.succeed(error)));
               if (job instanceof PutJobError) {
